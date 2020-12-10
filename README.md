@@ -25,7 +25,7 @@ pip install octoprint
 termux-usb -l
 ```
 
-should show something like `/dev/bus/usb/001/011`when the printer is connected
+should show something like `/dev/bus/usb/001/011`when the printer is connected (usually via an USB-OTG adapter)
 
 #### 4. Test if Octoprint works
 
