@@ -13,8 +13,10 @@ usblib.py is taken from [GitHub - Querela/termux-usb-python: USB access with Pyt
  - [https://play.google.com/store/apps/details?id=com.termux.api](https://play.google.com/store/apps/details?id=com.termux.api)
 
 #### 2. Inside Termux:
+You might want to set up a ssh server to have an easier time typing all that stuff via a remote shell on your computer ( [https://wiki.termux.com/wiki/Remote_Access#Using_the_SSH_server](https://wiki.termux.com/wiki/Remote_Access#Using_the_SSH_server) ), but you can also punch it into your phone:
 
 ```shell
+pkg update
 pkg install python termux-api libusb pyusb pyftdi clan git
 pip install octoprint
 ```
