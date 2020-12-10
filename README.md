@@ -13,7 +13,7 @@ usblib.py is taken from [GitHub - Querela/termux-usb-python: USB access with Pyt
 #### 2. Inside Termux:
 
 ```shell
-pkg install python termux-api libusb clan git
+pkg install python termux-api libusb pyusb clan git
 pip install octoprint
 ```
 
