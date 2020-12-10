@@ -9,6 +9,8 @@ usblib.py is taken from [GitHub - Querela/termux-usb-python: USB access with Pyt
 # How to use
 
 #### 1. Install Termux and Termux:API apps
+ - [https://play.google.com/store/apps/details?id=com.termux](https://play.google.com/store/apps/details?id=com.termux)
+ - [https://play.google.com/store/apps/details?id=com.termux.api](https://play.google.com/store/apps/details?id=com.termux.api)
 
 #### 2. Inside Termux:
 
