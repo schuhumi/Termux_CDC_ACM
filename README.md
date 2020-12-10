@@ -29,11 +29,19 @@ should show something like `/dev/bus/usb/001/011`when the printer is connected
 
 #### 4. Test if Octoprint works
 
+first you can check your current ip using
+
+```shell
+ip addr
+```
+
+then start octoprint like this.
+
 ```shell
 octoprint serve
 ```
 
-If it works correctly, stop it again with Ctrl+C
+If octoprint works correctly on `http://<ip-addr>:5000`, stop it again with Ctrl+C
 
 #### 5. Install the plugin
 
