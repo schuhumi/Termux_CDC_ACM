@@ -7,6 +7,7 @@ from usblib import device_from_fd
 import sys
 import array
 import os
+import time
 from multiprocessing.connection import Client
 from multiprocessing.connection import Listener
 
@@ -14,6 +15,22 @@ CDC_COMM_INTF = 0
 CDC_DATA_INTF = 1
 EP_IN = 0x81
 EP_OUT = 0x03
+
+tr_data = {}
+tr_last = time.time()
+def timereport(name, t):
+    global tr_data
+    global tr_last
+    if name in tr_data:
+        tr_data[name] += t
+    else:
+        tr_data[name] = t
+        
+    if time.time()-tr_last > 3:
+        tr_last = time.time()
+        for k,v in tr_data.items():
+            print(k, v)
+
 
 def main(fd, debug=False):
     dev = device_from_fd(fd)
@@ -53,28 +70,21 @@ def main(fd, debug=False):
             break
     
     databuf = b'' # Buffer to split received bytes into lines for octoprint's readline()
-    while(True):
-        # Check for data to send to the printer, and send it if present
-        for _ in range(8):
-            if not OOPIconn.poll():
-                break
-            b = OOPIconn.recv_bytes()
-            dev.write(EP_OUT, b)
-            del(b)
+    quitDaemon = False      
+    while not quitDaemon:
+        try:
+            if OOPIconn.poll():
+                dev.write(EP_OUT, OOPIconn.recv_bytes())
+        except EOFError: # This happens when the cdcacm_printer (__init__.py) closes the OOPIlistener
+            quitDaemon = True
+            break
         
-        # Try to fetch data from the printer and forward it to octoprint
-        while(True):
-            try:
-                data = dev.read(EP_IN, 1024, timeout=1).tobytes() # 1 millisecond timeout
-                #print("Deamon: Printer -> Octoprint: ", data)
-                databuf += data
-                if len(data)<1024:
-                    break
-                del(data)
-            except usb.core.USBTimeoutError:
-                break
-        # Forward data from the printer line by line to octoprint
-        while b'\n' in databuf:
+        try:
+            databuf += dev.read(EP_IN, 1024, timeout=1).tobytes()
+        except usb.core.USBTimeoutError:
+            pass
+        
+        if b'\n' in databuf:
             line, databuf = databuf.split(b'\n', 1)
             line = line+b'\n'
             OIPOconn.send_bytes(line)

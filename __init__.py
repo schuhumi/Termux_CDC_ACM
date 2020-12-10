@@ -39,9 +39,10 @@ class cdcacm_printer(object):
         
     def write(self, data):
         self.OOPIconn.send_bytes(data)
+        return len(data)
         
     def readline(self):
-        if self.OIPOconn.poll():
+        if self.OIPOconn.poll(self.read_timeout):
             return self.OIPOconn.recv_bytes()
         else:
             return b''
