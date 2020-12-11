@@ -43,7 +43,7 @@ then start octoprint like this.
 octoprint serve
 ```
 
-If octoprint works correctly on `http://<ip-addr>:5000`, stop it again with Ctrl+C
+If octoprint works correctly on `http://<ip-addr>:5000`, complete the setup dialog. Then stop it again with Ctrl+C
 
 #### 5. Install the plugin
 
