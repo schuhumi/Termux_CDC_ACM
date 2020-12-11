@@ -16,24 +16,15 @@ CDC_DATA_INTF = 1
 EP_IN = 0x81
 EP_OUT = 0x03
 
-tr_data = {}
-tr_last = time.time()
-def timereport(name, t):
-    global tr_data
-    global tr_last
-    if name in tr_data:
-        tr_data[name] += t
-    else:
-        tr_data[name] = t
-        
-    if time.time()-tr_last > 3:
-        tr_last = time.time()
-        for k,v in tr_data.items():
-            print(k, v)
-
 
 def main(fd, debug=False):
     dev = device_from_fd(fd)
+    
+    if dev.is_kernel_driver_active(0):
+        dev.detach_kernel_driver(0)
+        print("kernel driver detached")
+    else:
+        print("no kernel driver attached")
     
     # Lock usb device
     usb.util.claim_interface(dev, CDC_DATA_INTF)
