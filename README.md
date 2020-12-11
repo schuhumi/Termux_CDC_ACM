@@ -17,7 +17,7 @@ You might want to set up a ssh server to have an easier time typing all that stu
 
 ```shell
 pkg update
-pkg install python termux-api libusb pyusb pyftdi clan git
+pkg install python termux-api libusb pyusb pyftdi clang git
 pip install octoprint
 ```
 
