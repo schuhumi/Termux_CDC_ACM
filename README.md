@@ -9,12 +9,16 @@ usblib.py is taken from [GitHub - Querela/termux-usb-python: USB access with Pyt
 # How to use
 
 #### 1. Install Termux and Termux:API apps
+ - [https://play.google.com/store/apps/details?id=com.termux](https://play.google.com/store/apps/details?id=com.termux)
+ - [https://play.google.com/store/apps/details?id=com.termux.api](https://play.google.com/store/apps/details?id=com.termux.api)
 
 #### 2. Inside Termux:
+You might want to set up a ssh server to have an easier time typing all that stuff via a remote shell on your computer ( [https://wiki.termux.com/wiki/Remote_Access#Using_the_SSH_server](https://wiki.termux.com/wiki/Remote_Access#Using_the_SSH_server) ), but you can also punch it into your phone:
 
 ```shell
-pkg install python termux-api libusb pyusb pyftdi clan git
-pip install octoprint
+pkg update
+pkg install python termux-api libusb clang git
+pip install octoprint pyusb pyftdi
 ```
 
 #### 3. Make sure your printer connection works
@@ -23,15 +27,23 @@ pip install octoprint
 termux-usb -l
 ```
 
-should show something like `/dev/bus/usb/001/011`when the printer is connected
+should show something like `/dev/bus/usb/001/011`when the printer is connected (usually via an USB-OTG adapter)
 
 #### 4. Test if Octoprint works
+
+first you can check your current ip using
+
+```shell
+ip addr
+```
+
+then start octoprint like this.
 
 ```shell
 octoprint serve
 ```
 
-If it works correctly, stop it again with Ctrl+C
+If octoprint works correctly on `http://<ip-addr>:5000`, complete the setup dialog. Then stop it again with Ctrl+C
 
 #### 5. Install the plugin
 
