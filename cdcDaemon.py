@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import usb
 import usb.core
 import usb.util
 import usb.control
@@ -11,12 +12,6 @@ import time
 from multiprocessing.connection import Client
 from multiprocessing.connection import Listener
 
-CDC_COMM_INTF = 0
-CDC_DATA_INTF = 1
-EP_IN = 0x81
-EP_OUT = 0x03
-
-
 def main(fd, debug=False):
     dev = device_from_fd(fd)
     
@@ -26,21 +21,53 @@ def main(fd, debug=False):
     else:
         print("no kernel driver attached")
     
-    # Lock usb device
-    usb.util.claim_interface(dev, CDC_DATA_INTF)
-    usb.util.claim_interface(dev, CDC_COMM_INTF)
-    
     # Get endpoint
     cfg = dev.get_active_configuration()
     print(cfg)
-    intf = cfg[(1, 0)]
-    ep_in = intf[0]
+    
+    # CDC-Interfaces can be identified using their Interface Class
+    interface_CDC_Comm = usb.util.find_descriptor(cfg, bInterfaceClass=usb.CLASS_COMM)
+    interface_CDC_Data = usb.util.find_descriptor(cfg, bInterfaceClass=usb.CLASS_DATA)
+    
+    # Lock usb device
+    usb.util.claim_interface(dev, interface_CDC_Data)
+    usb.util.claim_interface(dev, interface_CDC_Comm)
+    
+    # Now we need to find the endpoints where we can transmit and receive serial data
+    # Helpful: https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__endpoint__descriptor.html
+    endpoint_OUT = None
+    endpoint_IN = None
+    for endpoint in interface_CDC_Data.endpoints():
+        if endpoint.bmAttributes==usb.ENDPOINT_TYPE_BULK: # Both endpoints have the "Bulk" attribute
+            # What's IN and OUT can be distinguished by bit 7 of the Endpoint Address
+            if endpoint.bEndpointAddress & 1<<7: # Bit7 of the bEndpointAddress determines the direction: 0=OUT, 1=IN
+                endpoint_IN = endpoint
+            else:
+                endpoint_OUT = endpoint
+    if endpoint_OUT == None:
+        print("cdcDaemon:: Error: Could not find OUT-Endpoint!")
+    if endpoint_IN == None:
+        print("cdcDaemon:: Error: Could not find IN-Endpoint!")
     
     # Configure usb-serial-converter
-    baudrate = int(os.environ["TERMUX_CDC_ACM_BAUDRATE"])
+    baudrate = int(os.environ["TERMUX_CDC_ACM_BAUDRATE"]) # From environment variable
+    # Configure as baudrate (<- in little endian) and 8N1
     serialConf = bytearray(list((baudrate).to_bytes(length=6, byteorder="little")) + [0x08])
-    dev.ctrl_transfer(0x21, 0x22, 0x01 | 0x02, 0, None)
-    dev.ctrl_transfer(0x21, 0x20, 0, 0, serialConf)
+    
+    # OUT-Transfer, parameters are: bmRequestType, bmRequest, wValue, wIndex and data-payload
+    # Helpful: https://github.com/NordicPlayground/node-usb-cdc-acm/blob/master/src/usb-cdc-acm.js
+    dev.ctrl_transfer( # set line state
+        0x21,   # bmRequestType: [host-to-device, type: class, recipient: iface]
+        0x22,   # SET_CONTROL_LINE_STATE
+        0x00, #0x02 | 0x01, # 0x02 "Activate carrier" & 0x01 "DTE is present" 
+        interface_CDC_Comm.index, # interface index
+        None)   # No data-payload
+    dev.ctrl_transfer( # set line coding
+        0x21,   # bmRequestType: [host-to-device, type: class, recipient: iface]
+        0x20,   # SET_LINE_CODING
+        0,      # Always zero
+        interface_CDC_Comm.index, # interface index
+        serialConf) # data-payload
     
     # Create Ocotoprint-In-Printer-Out-listener for octoprint to attach to
     OIPOaddress = ('localhost', 6001)     # family is deduced to be 'AF_INET'
@@ -56,7 +83,7 @@ def main(fd, debug=False):
     # Purge whatever the printer has sent while not being connected
     while(True):
         try:
-            dev.read(EP_IN, 64, timeout=1) # 1 millisecond timeout
+            endpoint_IN.read(64, timeout=1) # 1 millisecond timeout
         except usb.core.USBTimeoutError:
             break
     
@@ -65,13 +92,13 @@ def main(fd, debug=False):
     while not quitDaemon:
         try:
             if OOPIconn.poll():
-                dev.write(EP_OUT, OOPIconn.recv_bytes())
+                endpoint_OUT.write(OOPIconn.recv_bytes())
         except EOFError: # This happens when the cdcacm_printer (__init__.py) closes the OOPIlistener
             quitDaemon = True
             break
         
         try:
-            databuf += dev.read(EP_IN, 1024, timeout=1).tobytes()
+            databuf += endpoint_IN.read(1024, timeout=1).tobytes()
         except usb.core.USBTimeoutError:
             pass
         
@@ -84,6 +111,8 @@ def main(fd, debug=False):
     OOPIconn.close()
     OIPOconn.close()
     OIPOlistener.close()
+    usb.util.release_interface(dev, interface_CDC_Data)
+    usb.util.release_interface(dev, interface_CDC_Comm)
 
 fd = int(sys.argv[1])
 main(fd)

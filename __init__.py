@@ -36,7 +36,15 @@ class cdcacm_printer(object):
         # Connect to Daemon's OIPOlistener
         self.OIPOaddress = ('localhost', 6001)
         self.OIPOconn = Client(self.OIPOaddress, authkey=b'secret password')
-        
+    
+    @property
+    def timeout(self):
+        return self.read_timeout
+    
+    @timeout.setter
+    def timeout(self, value):
+        self.read_timeout = value
+    
     def write(self, data):
         self.OOPIconn.send_bytes(data)
         return len(data)
@@ -52,6 +60,12 @@ class cdcacm_printer(object):
         self.OOPIlistener.close()
         self.OIPOconn.close()
         os.killpg(os.getpgid(self.fd_proc.pid), signal.SIGTERM)
+        
+    def __del__(self):
+        try:
+            self.close()   # this fails if connection has been closed beforehand
+        except AttributeError:
+            pass
         
 
 class Termux_CDC_ACM_Plugin(octoprint.plugin.SettingsPlugin, octoprint.plugin.TemplatePlugin):

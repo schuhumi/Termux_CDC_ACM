@@ -25,7 +25,6 @@ def usb_info(fd):
     print(cfg)
 
 
-
 if len(sys.argv)>1:
     fd = int(sys.argv[1])
     usb_info(fd)
