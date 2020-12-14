@@ -13,7 +13,7 @@ from multiprocessing.connection import Client
 
 import octoprint.plugin
 
-class cdcacm_printer(object):
+class serial_printer(object):
     def __init__(self, comm_instance, port, baudrate, read_timeout):
         self.comm_instance = comm_instance
         self.port = port
@@ -25,7 +25,7 @@ class cdcacm_printer(object):
         self.OOPIlistener = Listener(self.OOPIaddress, authkey=b'secret password')
         
         # Start the Daemon, so that it can attach to OOPIlistener, and open a OIPOlistener
-        cdcDaemonpath = str(pathlib.Path(__file__).parent.absolute() / pathlib.Path("cdcDaemon.py"))
+        cdcDaemonpath = str(pathlib.Path(__file__).parent.absolute() / pathlib.Path("serialDaemon.py"))
         self.fd_env = os.environ.copy()
         self.fd_env["TERMUX_CDC_ACM_BAUDRATE"] = str(baudrate)
         self.fd_proc = subprocess.Popen("termux-usb -r -e "+cdcDaemonpath+" "+port, shell=True, env=self.fd_env, preexec_fn=os.setsid) 
@@ -56,26 +56,32 @@ class cdcacm_printer(object):
             return b''
         
     def close(self):
-        self.OOPIconn.close()
-        self.OOPIlistener.close()
-        self.OIPOconn.close()
-        os.killpg(os.getpgid(self.fd_proc.pid), signal.SIGTERM)
-        
-    def __del__(self):
         try:
-            self.close()   # this fails if connection has been closed beforehand
+            self.OOPIconn.close()
+        except AttributeError: # this fails if connection has been closed beforehand (e.g. __del__() after close())
+            pass
+        try:
+            self.OOPIlistener.close()
         except AttributeError:
             pass
+        try:
+            self.OIPOconn.close()
+        except AttributeError:
+            pass
+        self.fd_proc.terminate()
+        
+    def __del__(self):
+        self.close()
         
 
 class Termux_CDC_ACM_Plugin(octoprint.plugin.SettingsPlugin, octoprint.plugin.TemplatePlugin):
     port_names = list()
     
-    def cdcacm_printer_factory(self, comm_instance, port, baudrate, read_timeout):
+    def serial_printer_factory(self, comm_instance, port, baudrate, read_timeout):
         if not port in self.port_names:
             return None
 
-        serial_obj = cdcacm_printer(
+        serial_obj = serial_printer(
             comm_instance=comm_instance,
             port=port,
             baudrate=baudrate,
@@ -101,6 +107,6 @@ def __plugin_load__():
 
     global __plugin_hooks__
     __plugin_hooks__ = {
-        "octoprint.comm.transport.serial.factory": plugin.cdcacm_printer_factory,
+        "octoprint.comm.transport.serial.factory": plugin.serial_printer_factory,
         "octoprint.comm.transport.serial.additional_port_names": plugin.get_additional_port_names,
     }
