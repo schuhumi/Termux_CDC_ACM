@@ -20,7 +20,7 @@ def iter_devices():
 
 def usb_info(fd):
     dev = device_from_fd(fd)
-
+    print(f"{hex(dev.idVendor)=}, {hex(dev.idProduct)=}")
     cfg = dev.get_active_configuration()
     print(cfg)
 
