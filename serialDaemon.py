@@ -12,6 +12,7 @@ import time
 from multiprocessing.connection import Client
 from multiprocessing.connection import Listener
 from serialCDCACM import check_is_CDCACM, serial_CDCACM
+from serialCH340 import check_is_CH340, serial_CH340
 
 def main(fd, debug=False):
     dev = device_from_fd(fd)
@@ -27,10 +28,14 @@ def main(fd, debug=False):
     
     serial = None
     if check_is_CDCACM(dev):
+        print("serialDaemon:: Connected device is DCDACM")
         serial = serial_CDCACM(dev=dev, baudrate=baudrate)
+    if check_is_CH340(dev):
+        print("serialDaemon:: Connected device is CH340")
+        serial = serial_CH340(dev=dev, baudrate=baudrate)
         
     if serial is None:
-        print(f"Couldn't find matching driver for usb device {hex(dev.idVendor)=}, {hex(dev.idProduct)=} !")
+        print(f"serialDaemon:: Error: Couldn't find matching driver for usb device {hex(dev.idVendor)=}, {hex(dev.idProduct)=} !")
         print(dev.get_active_configuration())
         return
     
@@ -45,7 +50,7 @@ def main(fd, debug=False):
     # Accept connection of octoprint on OIPOlistener
     OIPOconn = OIPOlistener.accept()
     
-    
+    serial.purge() # clear whatever the printer has sent while octoprint wasn't connected
     
     databuf = b'' # Buffer to split received bytes into lines for octoprint's readline()
     quitDaemon = False      

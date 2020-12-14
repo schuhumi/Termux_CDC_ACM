@@ -2,7 +2,6 @@ import usb
 import usb.core
 import usb.util
 import usb.control
-from usblib import device_from_fd
 
 def check_is_CDCACM(dev):
     cfg = dev.get_active_configuration()
@@ -53,13 +52,13 @@ class serial_CDCACM():
         # OUT-Transfer, parameters are: bmRequestType, bmRequest, wValue, wIndex and data-payload
         # Helpful: https://github.com/NordicPlayground/node-usb-cdc-acm/blob/master/src/usb-cdc-acm.js
         self.dev.ctrl_transfer( # set line state
-            0x21,   # bmRequestType: [host-to-device, type: class, recipient: iface]
+            usb.ENDPOINT_OUT | usb.TYPE_CLASS | usb.RECIP_INTERFACE,   # bmRequestType: [host-to-device, type: class, recipient: iface]
             0x22,   # SET_CONTROL_LINE_STATE
             0x00, #0x02 | 0x01, # 0x02 "Activate carrier" & 0x01 "DTE is present" 
             self.interface_CDC_Comm.index, # interface index
             None)   # No data-payload
         self.dev.ctrl_transfer( # set line coding
-            0x21,   # bmRequestType: [host-to-device, type: class, recipient: iface]
+            usb.ENDPOINT_OUT | usb.TYPE_CLASS | usb.RECIP_INTERFACE,   # bmRequestType: [host-to-device, type: class, recipient: iface]
             0x20,   # SET_LINE_CODING
             0,      # Always zero
             self.interface_CDC_Comm.index, # interface index

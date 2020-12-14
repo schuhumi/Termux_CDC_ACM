@@ -68,7 +68,10 @@ class serial_printer(object):
             self.OIPOconn.close()
         except AttributeError:
             pass
-        self.fd_proc.terminate()
+        try:
+            self.fd_proc.terminate()
+        except AttributeError:
+            pass
         
     def __del__(self):
         self.close()
