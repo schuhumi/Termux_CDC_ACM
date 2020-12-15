@@ -19,16 +19,20 @@ class serial_printer(object):
         self.port = port
         self.baudrate = baudrate
         self.read_timeout = read_timeout
+        
+        # Get permission firsthand (so that timeouts in communication with serialDaemon do not get triggered by the user taking time to press "yes" on the permission popup)
+        subprocess.check_output(['termux-usb', '-r', port])
 
         # OOPI = Octoprint Out Printer In   
         self.OOPIaddress = ('localhost', 6000)     # family is deduced to be 'AF_INET'
         self.OOPIlistener = Listener(self.OOPIaddress, authkey=b'secret password')
+        self.OOPIlistener._listener._socket.settimeout(3)
         
         # Start the Daemon, so that it can attach to OOPIlistener, and open a OIPOlistener
         cdcDaemonpath = str(pathlib.Path(__file__).parent.absolute() / pathlib.Path("serialDaemon.py"))
         self.fd_env = os.environ.copy()
         self.fd_env["TERMUX_CDC_ACM_BAUDRATE"] = str(baudrate)
-        self.fd_proc = subprocess.Popen("termux-usb -r -e "+cdcDaemonpath+" "+port, shell=True, env=self.fd_env, preexec_fn=os.setsid) 
+        self.fd_proc = subprocess.Popen("termux-usb -e "+cdcDaemonpath+" "+port, shell=True, env=self.fd_env, preexec_fn=os.setsid) 
         
         # Accept OOPI connection from Daemon
         self.OOPIconn = self.OOPIlistener.accept()
@@ -50,9 +54,13 @@ class serial_printer(object):
         return len(data)
         
     def readline(self):
-        if self.OIPOconn.poll(self.read_timeout):
-            return self.OIPOconn.recv_bytes()
-        else:
+        try:
+            if self.OIPOconn.poll(self.read_timeout):
+                return self.OIPOconn.recv_bytes()
+            else:
+                return b''
+        except EOFError: # serialClient crashed
+            self.close()
             return b''
         
     def close(self):
